@@ -574,6 +574,7 @@ func (pool *TxPool) DebugTxPool() ([]string, error) {
 
 		out = append(out, o)
 		fmt.Printf("%s\n", o)
+		sorted.Pop()
 	}
 	return out, nil
 }
