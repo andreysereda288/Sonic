@@ -18,6 +18,12 @@ package evmcore
 
 import (
 	"errors"
+	"fmt"
+	"github.com/Fantom-foundation/go-opera/utils"
+	"github.com/Fantom-foundation/lachesis-base/common/bigendian"
+	"github.com/Fantom-foundation/lachesis-base/hash"
+	"github.com/Fantom-foundation/lachesis-base/inter/idx"
+	"github.com/Fantom-foundation/lachesis-base/inter/pos"
 	"math"
 	"math/big"
 	"math/rand"
@@ -159,6 +165,9 @@ type StateReader interface {
 	MaxGasLimit() uint64
 	SubscribeNewBlock(ch chan<- ChainHeadNotify) notify.Subscription
 	Config() *params.ChainConfig
+
+	GetValidators() *pos.Validators
+	GetEpoch() idx.Epoch
 }
 
 // TxPoolConfig are the configuration parameters of the transaction pool.
@@ -521,6 +530,54 @@ func (pool *TxPool) Content() (map[common.Address]types.Transactions, map[common
 		queued[addr] = list.Flatten()
 	}
 	return pending, queued
+}
+
+const (
+	TxTurnPeriod        = 8 * time.Second
+	TxTurnPeriodLatency = 1 * time.Second
+	TxTurnNonces        = 32
+)
+
+func getTxRoundIndex(now, txTime time.Time, validatorsNum idx.Validator) int {
+	passed := now.Sub(txTime)
+	if passed < 0 {
+		passed = 0
+	}
+	return int((passed / TxTurnPeriod) % time.Duration(validatorsNum))
+}
+
+func (pool *TxPool) DebugTxPool() ([]string, error) {
+	pendingTxs, err := pool.Pending(true)
+	if err != nil {
+		return nil, err
+	}
+	sorted := types.NewTransactionsByPriceAndNonce(pool.signer, pendingTxs, pool.chain.MinGasPrice())
+	validators := pool.chain.GetValidators()
+	epoch := pool.chain.GetEpoch()
+	out := make([]string, 0)
+	for tx := sorted.Peek(); tx != nil; tx = sorted.Peek() {
+		fmt.Printf("taking tx %x\n", tx.Hash())
+
+		txTime := txtime.Of(tx.Hash())
+		sender, _ := types.Sender(pool.signer, tx)
+		o := tx.Hash().String() + ": "
+		o += fmt.Sprintf("seen %fs ago, ",time.Now().Sub(txTime).Seconds())
+
+		roundIndex := getTxRoundIndex(time.Now(), txTime, validators.Len())
+
+		roundsHash := hash.Of(sender.Bytes(), bigendian.Uint64ToBytes(tx.Nonce()/TxTurnNonces), epoch.Bytes())
+
+		// generate the validators sequence for the tx
+		rounds := utils.WeightedPermutation(int(validators.Len()), validators.SortedWeights(), roundsHash)
+
+		for i := 0; i <= roundIndex; i++ {
+			fmt.Printf("taking val %d\n", i)
+			o += fmt.Sprintf("val%d, ", validators.GetID(idx.Validator(rounds[roundIndex])))
+		}
+
+		out = append(out, o)
+	}
+	return out, nil
 }
 
 // ContentFrom retrieves the data content of the transaction pool, returning the

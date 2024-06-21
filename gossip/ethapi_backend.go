@@ -413,6 +413,10 @@ func (b *EthAPIBackend) TxPoolContent() (map[common.Address]types.Transactions, 
 	return b.svc.txpool.Content()
 }
 
+func (b *EthAPIBackend) DebugTxPool() ([]string, error) {
+	return b.svc.txpool.DebugTxPool()
+}
+
 // Progress returns current synchronization status of this node
 func (b *EthAPIBackend) Progress() ethapi.PeerProgress {
 	p2pProgress := b.svc.handler.myProgress()

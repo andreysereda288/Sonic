@@ -120,6 +120,7 @@ type TxPool interface {
 	Stats() (int, int)
 	Content() (map[common.Address]types.Transactions, map[common.Address]types.Transactions)
 	ContentFrom(addr common.Address) (types.Transactions, types.Transactions)
+	DebugTxPool() ([]string, error)
 	GasPrice() *big.Int
 }
 

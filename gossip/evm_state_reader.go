@@ -2,6 +2,7 @@ package gossip
 
 import (
 	"fmt"
+	"github.com/Fantom-foundation/lachesis-base/inter/pos"
 	"math/big"
 
 	"github.com/Fantom-foundation/lachesis-base/hash"
@@ -66,6 +67,14 @@ func (r *EvmStateReader) CurrentBlock() *evmcore.EvmBlock {
 	n := r.store.GetLatestBlockIndex()
 
 	return r.getBlock(hash.Event{}, n, true)
+}
+
+func (r *EvmStateReader) GetEpoch() idx.Epoch {
+	return r.store.GetEpoch()
+}
+
+func (r *EvmStateReader) GetValidators() *pos.Validators {
+	return r.store.GetValidators()
 }
 
 func (r *EvmStateReader) CurrentHeader() *evmcore.EvmHeader {

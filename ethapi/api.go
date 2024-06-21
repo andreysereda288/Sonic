@@ -210,6 +210,10 @@ func (s *PublicTxPoolAPI) Content() map[string]map[string]map[string]*RPCTransac
 	return content
 }
 
+func (s *PublicTxPoolAPI) Debug() ([]string, error) {
+	return s.b.DebugTxPool()
+}
+
 // ContentFrom returns the transactions contained within the transaction pool.
 func (s *PublicTxPoolAPI) ContentFrom(addr common.Address) map[string]map[string]*RPCTransaction {
 	content := make(map[string]map[string]*RPCTransaction, 2)
