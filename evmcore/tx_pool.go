@@ -556,14 +556,12 @@ func (pool *TxPool) DebugTxPool() ([]string, error) {
 	epoch := pool.chain.GetEpoch()
 	out := make([]string, 0)
 	for tx := sorted.Peek(); tx != nil; tx = sorted.Peek() {
-		fmt.Printf("taking tx %x\n", tx.Hash())
-
 		txTime := txtime.Of(tx.Hash())
 		sender, _ := types.Sender(pool.signer, tx)
 		o := tx.Hash().String() + ": "
-		o += fmt.Sprintf("seen %fs ago, ",time.Now().Sub(txTime).Seconds())
 
 		roundIndex := getTxRoundIndex(time.Now(), txTime, validators.Len())
+		o += fmt.Sprintf("seen %fs ago round %d, ", time.Now().Sub(txTime).Seconds(), roundIndex)
 
 		roundsHash := hash.Of(sender.Bytes(), bigendian.Uint64ToBytes(tx.Nonce()/TxTurnNonces), epoch.Bytes())
 
@@ -571,11 +569,11 @@ func (pool *TxPool) DebugTxPool() ([]string, error) {
 		rounds := utils.WeightedPermutation(int(validators.Len()), validators.SortedWeights(), roundsHash)
 
 		for i := 0; i <= roundIndex; i++ {
-			fmt.Printf("taking val %d\n", i)
 			o += fmt.Sprintf("val%d, ", validators.GetID(idx.Validator(rounds[roundIndex])))
 		}
 
 		out = append(out, o)
+		fmt.Printf("%s\n", o)
 	}
 	return out, nil
 }
