@@ -66,11 +66,7 @@ type GasRulesRLPV1 struct {
 	EventGas     uint64
 	ParentGas    uint64
 	ExtraDataGas uint64
-	// Post-LLR fields
-	BlockVotesBaseGas    uint64
-	BlockVoteGas         uint64
-	EpochVoteGas         uint64
-	MisbehaviourProofGas uint64
+	BridgeVoteGas uint64
 }
 
 type GasRules GasRulesRLPV1
@@ -220,14 +216,11 @@ func DefaultEpochsRules() EpochsRules {
 
 func DefaultGasRules() GasRules {
 	return GasRules{
-		MaxEventGas:          10000000 + DefaultEventGas,
-		EventGas:             DefaultEventGas,
-		ParentGas:            2400,
-		ExtraDataGas:         25,
-		BlockVotesBaseGas:    1024,
-		BlockVoteGas:         512,
-		EpochVoteGas:         1536,
-		MisbehaviourProofGas: 71536,
+		MaxEventGas:       10000000 + DefaultEventGas,
+		EventGas:          DefaultEventGas,
+		ParentGas:         2400,
+		ExtraDataGas:      25,
+		BridgeVoteGas:     1536,
 	}
 }
 

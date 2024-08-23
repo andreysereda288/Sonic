@@ -29,6 +29,7 @@ type EventI interface {
 	// Payload-related fields
 
 	AnyTxs() bool
+	AnyBridgeVotes() bool
 	PayloadHash() hash.Hash
 }
 
@@ -52,16 +53,13 @@ type EventPayloadI interface {
 	Sig() Signature
 
 	Txs() types.Transactions
+	BridgeVotes() []BridgeVote
 }
 
-var emptyPayloadHash1 = CalcPayloadHash(&MutableEventPayload{extEventData: extEventData{version: 1}})
+var emptyPayloadHash2 = CalcPayloadHash(&MutableEventPayload{extEventData: extEventData{version: 2}})
 
 func EmptyPayloadHash(version uint8) hash.Hash {
-	if version == 0 {
-		return hash.Hash(types.EmptyRootHash)
-	} else {
-		return emptyPayloadHash1
-	}
+	return emptyPayloadHash2
 }
 
 type baseEvent struct {
@@ -83,6 +81,7 @@ type extEventData struct {
 	extra         []byte
 
 	anyTxs                bool
+	anyBridgeVotes        bool
 	payloadHash           hash.Hash
 }
 
@@ -92,6 +91,7 @@ type sigData struct {
 
 type payloadData struct {
 	txs                types.Transactions
+	bridgeVotes        []BridgeVote
 }
 
 type Event struct {
@@ -163,6 +163,8 @@ func (e *extEventData) PayloadHash() hash.Hash { return e.payloadHash }
 
 func (e *extEventData) AnyTxs() bool { return e.anyTxs }
 
+func (e *extEventData) AnyBridgeVotes() bool { return e.anyBridgeVotes }
+
 func (e *extEventData) GasPowerLeft() GasPowerLeft { return e.gasPowerLeft }
 
 func (e *extEventData) GasPowerUsed() uint64 { return e.gasPowerUsed }
@@ -170,6 +172,8 @@ func (e *extEventData) GasPowerUsed() uint64 { return e.gasPowerUsed }
 func (e *sigData) Sig() Signature { return e.sig }
 
 func (e *payloadData) Txs() types.Transactions { return e.txs }
+
+func (e *payloadData) BridgeVotes() []BridgeVote { return e.bridgeVotes }
 
 func CalcTxHash(txs types.Transactions) hash.Hash {
 	return hash.Hash(types.DeriveSha(txs, trie.NewStackTrie(nil)))
@@ -181,8 +185,17 @@ func CalcReceiptsHash(receipts []*types.ReceiptForStorage) hash.Hash {
 	return hash.BytesToHash(hasher.Sum(nil))
 }
 
+func CalcBridgeVotesHash(bvs []BridgeVote) hash.Hash {
+	hasher := sha256.New()
+	_ = rlp.Encode(hasher, bvs)
+	return hash.BytesToHash(hasher.Sum(nil))
+}
+
 func CalcPayloadHash(e EventPayloadI) hash.Hash {
-	return CalcTxHash(e.Txs())
+	return hash.Of(
+		CalcTxHash(e.Txs()).Bytes(),
+		CalcBridgeVotesHash(e.BridgeVotes()).Bytes(),
+	)
 }
 
 func (e *MutableEventPayload) SetVersion(v uint8) { e.version = v }
@@ -208,6 +221,11 @@ func (e *MutableEventPayload) SetSig(v Signature) { e.sig = v }
 func (e *MutableEventPayload) SetTxs(v types.Transactions) {
 	e.txs = v
 	e.anyTxs = len(v) != 0
+}
+
+func (e *MutableEventPayload) SetBridgeVotes(v []BridgeVote) {
+	e.bridgeVotes = v
+	e.anyBridgeVotes = len(v) != 0
 }
 
 func calcEventID(h hash.Hash) (id [24]byte) {

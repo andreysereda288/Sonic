@@ -99,14 +99,11 @@ func TestGasRulesLLRCompatibilityRLP(t *testing.T) {
 	require := require.New(t)
 
 	b1, err := rlp.EncodeToBytes(GasRules{
-		MaxEventGas:          1,
-		EventGas:             2,
-		ParentGas:            3,
-		ExtraDataGas:         4,
-		BlockVotesBaseGas:    0,
-		BlockVoteGas:         0,
-		EpochVoteGas:         0,
-		MisbehaviourProofGas: 0,
+		MaxEventGas:       1,
+		EventGas:          2,
+		ParentGas:         3,
+		ExtraDataGas:      4,
+		BridgeVoteGas:     0,
 	})
 	require.NoError(err)
 

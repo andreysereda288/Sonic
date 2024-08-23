@@ -56,7 +56,9 @@ func CalcGasPowerUsed(e inter.EventPayloadI, rules opera.Rules) uint64 {
 	}
 	extraGas := uint64(len(e.Extra())) * gasCfg.ExtraDataGas
 
-	return txsGas + parentsGas + extraGas + gasCfg.EventGas
+	bridgeVotesGas := uint64(len(e.BridgeVotes())) * gasCfg.BridgeVoteGas
+
+	return txsGas + parentsGas + extraGas + gasCfg.EventGas + bridgeVotesGas
 }
 
 func (v *Checker) checkGas(e inter.EventPayloadI, rules opera.Rules) error {

@@ -75,7 +75,7 @@ func TestEventPayloadSerialization(t *testing.T) {
 	ee := map[string]EventPayload{
 		"empty2": emptyEvent(2),
 		"max":    *max.Build(),
-		"random": *FakeEvent(12),
+		"random": *FakeEvent(12, 2),
 	}
 
 	t.Run("ok", func(t *testing.T) {
@@ -93,6 +93,10 @@ func TestEventPayloadSerialization(t *testing.T) {
 			require.EqualValues(header0.sigData, header1.sigData, name)
 			for i := range header0.payloadData.txs {
 				require.EqualValues(header0.payloadData.txs[i].Hash(), header1.payloadData.txs[i].Hash(), name)
+			}
+			for i := range header0.payloadData.bridgeVotes {
+				require.EqualValues(header0.payloadData.bridgeVotes[i].Hash, header1.payloadData.bridgeVotes[i].Hash, name)
+				require.EqualValues(header0.payloadData.bridgeVotes[i].Signature, header1.payloadData.bridgeVotes[i].Signature, name)
 			}
 			require.EqualValues(header0.baseEvent, header1.baseEvent, name)
 			require.EqualValues(header0.ID(), header1.ID(), name)
@@ -136,7 +140,7 @@ func BenchmarkEventPayload_EncodeRLP_empty(b *testing.B) {
 }
 
 func BenchmarkEventPayload_EncodeRLP_NoPayload(b *testing.B) {
-	e := FakeEvent(0)
+	e := FakeEvent(0, 0)
 
 	b.ResetTimer()
 
@@ -150,7 +154,7 @@ func BenchmarkEventPayload_EncodeRLP_NoPayload(b *testing.B) {
 }
 
 func BenchmarkEventPayload_EncodeRLP(b *testing.B) {
-	e := FakeEvent(1000)
+	e := FakeEvent(1000, 0)
 
 	b.ResetTimer()
 
@@ -183,7 +187,7 @@ func BenchmarkEventPayload_DecodeRLP_empty(b *testing.B) {
 }
 
 func BenchmarkEventPayload_DecodeRLP_NoPayload(b *testing.B) {
-	e := FakeEvent(0)
+	e := FakeEvent(0, 0)
 	me := MutableEventPayload{}
 
 	buf, err := rlp.EncodeToBytes(&e)
@@ -202,7 +206,7 @@ func BenchmarkEventPayload_DecodeRLP_NoPayload(b *testing.B) {
 }
 
 func BenchmarkEventPayload_DecodeRLP(b *testing.B) {
-	e := FakeEvent(1000)
+	e := FakeEvent(1000, 0)
 	me := MutableEventPayload{}
 
 	buf, err := rlp.EncodeToBytes(&e)
@@ -224,7 +228,7 @@ func TestEventRPCMarshaling(t *testing.T) {
 	t.Run("Event", func(t *testing.T) {
 		require := require.New(t)
 		for i := 0; i < 3; i++ {
-			var event0 EventI = &FakeEvent(i).Event
+			var event0 EventI = &FakeEvent(i, i).Event
 			mapping := RPCMarshalEvent(event0)
 			bb, err := json.Marshal(mapping)
 			require.NoError(err)
@@ -241,7 +245,7 @@ func TestEventRPCMarshaling(t *testing.T) {
 	t.Run("EventPayload", func(t *testing.T) {
 		require := require.New(t)
 		for i := 0; i < 3; i++ {
-			var event0 = FakeEvent(i)
+			var event0 = FakeEvent(i, i)
 			mapping, err := RPCMarshalEventPayload(event0, true, false)
 			require.NoError(err)
 			bb, err := json.Marshal(mapping)
@@ -299,7 +303,7 @@ func randAccessList(r *rand.Rand, maxAddrs, maxKeys int) types.AccessList {
 }
 
 // FakeEvent generates random event for testing purpose.
-func FakeEvent(txsNum int) *EventPayload {
+func FakeEvent(txsNum int, bridgeVotesNum int) *EventPayload {
 	r := rand.New(rand.NewSource(int64(0)))
 	random := &MutableEventPayload{}
 	random.SetVersion(2)
@@ -363,8 +367,16 @@ func FakeEvent(txsNum int) *EventPayload {
 			txs = append(txs, tx)
 		}
 	}
+	var bvs []BridgeVote
+	for i := 0; i < bridgeVotesNum; i++ {
+		bvs = append(bvs, BridgeVote{
+			Hash: common.Hash(randHash(r)),
+			Signature: BridgeSignature{0x12},
+		})
+	}
 
 	random.SetTxs(txs)
+	random.SetBridgeVotes(bvs)
 	random.SetPayloadHash(CalcPayloadHash(random))
 
 	parent := MutableEventPayload{}

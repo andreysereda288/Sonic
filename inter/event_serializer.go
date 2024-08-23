@@ -61,7 +61,8 @@ func (e *Event) MarshalCSER(w *cser.Writer) error {
 	}
 	// tx hash
 	w.Bool(e.AnyTxs())
-	if e.AnyTxs() {
+	w.Bool(e.AnyBridgeVotes())
+	if e.AnyTxs() || e.AnyBridgeVotes() {
 		w.FixedBytes(e.PayloadHash().Bytes())
 	}
 	// extra
@@ -130,8 +131,9 @@ func eventUnmarshalCSER(r *cser.Reader, e *MutableEventPayload) (err error) {
 	}
 	// tx hash
 	anyTxs := r.Bool()
+	anyBridgeVotes := r.Bool()
 	payloadHash := EmptyPayloadHash(version)
-	if anyTxs {
+	if anyTxs || anyBridgeVotes {
 		r.FixedBytes(payloadHash[:])
 		if payloadHash == EmptyPayloadHash(version) {
 			return cser.ErrNonCanonicalEncoding
@@ -154,26 +156,17 @@ func eventUnmarshalCSER(r *cser.Reader, e *MutableEventPayload) (err error) {
 	e.SetParents(parents)
 	e.SetPrevEpochHash(prevEpochHash)
 	e.anyTxs = anyTxs
+	e.anyBridgeVotes = anyBridgeVotes
 	e.SetPayloadHash(payloadHash)
 	e.SetExtra(extra)
 	return nil
 }
 
-func MarshalTxsCSER(txs types.Transactions, w *cser.Writer) error {
-	// txs size
-	w.U56(uint64(txs.Len()))
-	// txs
-	for _, tx := range txs {
-		err := TransactionMarshalCSER(w, tx)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func (e *EventPayload) MarshalCSER(w *cser.Writer) error {
 	if e.AnyTxs() != (e.txs.Len() != 0) {
+		return ErrSerMalformedEvent
+	}
+	if e.AnyBridgeVotes() != (len(e.bridgeVotes) != 0) {
 		return ErrSerMalformedEvent
 	}
 	err := e.Event.MarshalCSER(w)
@@ -182,19 +175,18 @@ func (e *EventPayload) MarshalCSER(w *cser.Writer) error {
 	}
 	w.FixedBytes(e.sig.Bytes())
 	if e.AnyTxs() {
-		if e.Version() == 0 {
-			// Txs are serialized with CSER for legacy events
-			err = MarshalTxsCSER(e.txs, w)
-			if err != nil {
-				return err
-			}
-		} else {
-			b, err := rlp.EncodeToBytes(e.txs)
-			if err != nil {
-				return err
-			}
-			w.SliceBytes(b)
+		b, err := rlp.EncodeToBytes(e.txs)
+		if err != nil {
+			return err
 		}
+		w.SliceBytes(b)
+	}
+	if e.AnyBridgeVotes() {
+		b, err := rlp.EncodeToBytes(e.bridgeVotes)
+		if err != nil {
+			return err
+		}
+		w.SliceBytes(b)
 	}
 	return nil
 }
@@ -208,31 +200,23 @@ func (e *MutableEventPayload) UnmarshalCSER(r *cser.Reader) error {
 	// txs
 	txs := make(types.Transactions, 0, 4)
 	if e.AnyTxs() {
-		if e.version == 0 {
-			// txs size
-			size := r.U56()
-			if size == 0 {
-				return cser.ErrNonCanonicalEncoding
-			}
-			if size > ProtocolMaxMsgSize/64 {
-				return cser.ErrTooLargeAlloc
-			}
-			for i := uint64(0); i < size; i++ {
-				tx, err := TransactionUnmarshalCSER(r)
-				if err != nil {
-					return err
-				}
-				txs = append(txs, tx)
-			}
-		} else {
-			b := r.SliceBytes(ProtocolMaxMsgSize)
-			err := rlp.DecodeBytes(b, &txs)
-			if err != nil {
-				return err
-			}
+		b := r.SliceBytes(ProtocolMaxMsgSize)
+		err := rlp.DecodeBytes(b, &txs)
+		if err != nil {
+			return err
 		}
 	}
 	e.txs = txs
+	// bridge votes
+	bridgeVotes := make([]BridgeVote, 0, 2)
+	if e.AnyBridgeVotes() {
+		b := r.SliceBytes(ProtocolMaxMsgSize)
+		err := rlp.DecodeBytes(b, &bridgeVotes)
+		if err != nil {
+			return err
+		}
+	}
+	e.bridgeVotes = bridgeVotes
 	return nil
 }
 
@@ -314,6 +298,7 @@ func RPCMarshalEvent(e EventI) map[string]interface{} {
 		},
 		"gasPowerUsed":          hexutil.Uint64(e.GasPowerUsed()),
 		"anyTxs":                e.AnyTxs(),
+		"anyBridgeVotes":        e.AnyBridgeVotes(),
 	}
 }
 
@@ -364,6 +349,7 @@ func RPCUnmarshalEvent(fields map[string]interface{}) EventI {
 	e.SetPayloadHash(*mayBeHash("payloadHash"))
 	e.SetGasPowerUsed(mustBeUint64("gasPowerUsed"))
 	e.anyTxs = mustBeBool("anyTxs")
+	e.anyBridgeVotes = mustBeBool("anyBridgeVotes")
 
 	gas := GasPowerLeft{}
 	obj := fields["gasPowerLeft"].(map[string]interface{})

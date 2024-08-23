@@ -115,7 +115,7 @@ func (u *Upgrades) DecodeRLP(s *rlp.Stream) error {
 func (r GasRules) EncodeRLP(w io.Writer) error {
 	// write the type
 	rType := uint8(0)
-	if r.EpochVoteGas != 0 || r.MisbehaviourProofGas != 0 || r.BlockVotesBaseGas != 0 || r.BlockVoteGas != 0 {
+	if r.BridgeVoteGas != 0 { // TODO remove rType=0 support
 		rType = 1
 		_, err := w.Write([]byte{rType})
 		if err != nil {

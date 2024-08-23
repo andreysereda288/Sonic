@@ -393,6 +393,13 @@ func (em *Emitter) createEvent(sortedTxs *transactionsByPriceAndNonce) (*inter.E
 	mutEvent.SetLamport(maxLamport + 1)
 	mutEvent.SetCreationTime(inter.MaxTimestamp(inter.Timestamp(time.Now().UnixNano()), selfParentTime+1))
 
+	mutEvent.SetBridgeVotes([]inter.BridgeVote{ // TODO
+		{
+			Hash: common.Hash{0x11},
+			Signature: inter.BridgeSignature{0x22},
+		},
+	})
+
 	// node version
 	if mutEvent.Seq() <= 1 && len(em.config.VersionToPublish) > 0 {
 		version := []byte("v-" + em.config.VersionToPublish)
