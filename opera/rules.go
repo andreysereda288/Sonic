@@ -61,7 +61,7 @@ type GasPowerRules struct {
 	MinStartupGas      uint64
 }
 
-type GasRulesRLPV1 struct {
+type GasRulesRLPV2 struct {
 	MaxEventGas  uint64
 	EventGas     uint64
 	ParentGas    uint64
@@ -69,7 +69,7 @@ type GasRulesRLPV1 struct {
 	BridgeVoteGas uint64
 }
 
-type GasRules GasRulesRLPV1
+type GasRules GasRulesRLPV2
 
 type EpochsRules struct {
 	MaxEpochGas      uint64

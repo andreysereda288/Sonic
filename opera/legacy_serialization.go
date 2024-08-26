@@ -113,63 +113,28 @@ func (u *Upgrades) DecodeRLP(s *rlp.Stream) error {
 
 // EncodeRLP is for RLP serialization.
 func (r GasRules) EncodeRLP(w io.Writer) error {
-	// write the type
-	rType := uint8(0)
-	if r.BridgeVoteGas != 0 { // TODO remove rType=0 support
-		rType = 1
-		_, err := w.Write([]byte{rType})
-		if err != nil {
-			return err
-		}
+	// write the rType (version)
+	_, err := w.Write([]byte{2})
+	if err != nil {
+		return err
 	}
-	if rType == 0 {
-		return rlp.Encode(w, &GasRulesRLPV0{
-			MaxEventGas:  r.MaxEventGas,
-			EventGas:     r.EventGas,
-			ParentGas:    r.ParentGas,
-			ExtraDataGas: r.ExtraDataGas,
-		})
-	} else {
-		return rlp.Encode(w, (*GasRulesRLPV1)(&r))
-	}
+	return rlp.Encode(w, (*GasRulesRLPV2)(&r))
 }
 
 // DecodeRLP is for RLP serialization.
 func (r *GasRules) DecodeRLP(s *rlp.Stream) error {
-	kind, _, err := s.Kind()
-	if err != nil {
+	// read rType
+	var b []byte
+	var err error
+	if b, err = s.Bytes(); err != nil {
 		return err
 	}
-	// read rType
-	rType := uint8(0)
-	if kind == rlp.Byte {
-		var b []byte
-		if b, err = s.Bytes(); err != nil {
-			return err
-		}
-		if len(b) == 0 {
-			return errors.New("empty typed")
-		}
-		rType = b[0]
-		if rType == 0 || rType > 1 {
-			return errors.New("unknown type")
-		}
+	if len(b) == 0 {
+		return errors.New("empty typed")
 	}
-	// decode the main body
-	if rType == 0 {
-		rlpR := GasRulesRLPV0{}
-		err = s.Decode(&rlpR)
-		if err != nil {
-			return err
-		}
-		*r = GasRules{
-			MaxEventGas:  rlpR.MaxEventGas,
-			EventGas:     rlpR.EventGas,
-			ParentGas:    rlpR.ParentGas,
-			ExtraDataGas: rlpR.ExtraDataGas,
-		}
-		return nil
-	} else {
-		return s.Decode((*GasRulesRLPV1)(r))
+	rType := b[0]
+	if rType != 2 {
+		return errors.New("unknown rType")
 	}
+	return s.Decode((*GasRulesRLPV2)(r))
 }
