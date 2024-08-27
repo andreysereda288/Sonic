@@ -102,6 +102,8 @@ type Emitter struct {
 	emittedEvFile    *os.File
 	busyRate         *rate.Gauge
 
+	bridgeHashes []common.Hash
+
 	logger.Periodic
 }
 
@@ -326,6 +328,33 @@ func (em *Emitter) loadPrevEmitTime() time.Time {
 	return prevEvent.CreationTime().Time()
 }
 
+func (em *Emitter) SetBridgeHash(index int, hash common.Hash) {
+	for len(em.bridgeHashes) <= index {
+		em.bridgeHashes = append(em.bridgeHashes, common.Hash{})
+	}
+	em.bridgeHashes[index] = hash
+}
+
+func (em *Emitter) getBridgeVotes() []inter.BridgeVote {
+	var bridgeVotes = make([]inter.BridgeVote, 0, len(em.bridgeHashes))
+	for _, bridgeHash := range em.bridgeHashes {
+		if bridgeHash != (common.Hash{}) {
+			bridgeSignature, err := em.world.Signer.SignBridge(em.config.Validator.PubKey, bridgeHash[:])
+			if err != nil {
+				em.Periodic.Error(time.Second, "Failed to sign bridge vote", "err", err)
+				return nil
+			}
+			var sig inter.BridgeSignature
+			copy(sig[:], bridgeSignature)
+			bridgeVotes = append(bridgeVotes, inter.BridgeVote{
+				Hash: bridgeHash,
+				Signature: sig,
+			})
+		}
+	}
+	return bridgeVotes
+}
+
 // createEvent is not safe for concurrent use.
 func (em *Emitter) createEvent(sortedTxs *transactionsByPriceAndNonce) (*inter.EventPayload, error) {
 	if !em.isValidator() {
@@ -393,12 +422,7 @@ func (em *Emitter) createEvent(sortedTxs *transactionsByPriceAndNonce) (*inter.E
 	mutEvent.SetLamport(maxLamport + 1)
 	mutEvent.SetCreationTime(inter.MaxTimestamp(inter.Timestamp(time.Now().UnixNano()), selfParentTime+1))
 
-	mutEvent.SetBridgeVotes([]inter.BridgeVote{ // TODO
-		{
-			Hash: common.Hash{0x11},
-			Signature: inter.BridgeSignature{0x22},
-		},
-	})
+	mutEvent.SetBridgeVotes(em.getBridgeVotes())
 
 	// node version
 	if mutEvent.Seq() <= 1 && len(em.config.VersionToPublish) > 0 {

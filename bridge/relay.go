@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"github.com/Fantom-foundation/go-opera/evmcore"
+	"github.com/Fantom-foundation/go-opera/gossip/emitter"
 	"github.com/Fantom-foundation/go-opera/inter"
 	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/event"
@@ -19,6 +21,7 @@ type Relay struct {
 	ethereumNewBlockChan chan *types.Header
 	ethereumSub     ethereum.Subscription
 	stopRunningLoop context.CancelFunc
+	emitter *emitter.Emitter
 }
 
 func MakeRelay(ethUrl string, ethChainId *big.Int) (*Relay, error) {
@@ -49,6 +52,10 @@ func MakeRelay(ethUrl string, ethChainId *big.Int) (*Relay, error) {
 func (r *Relay) SetNewBlockChan(ch chan evmcore.ChainHeadNotify, sub event.Subscription) {
 	r.localNewBlockChan = ch
 	r.localNewBlockSub = sub
+}
+
+func (r *Relay) SetEmitter(em *emitter.Emitter) {
+	r.emitter = em
 }
 
 // GetBridgeVotes to be called from emitter, when a new event is being emitted
@@ -87,12 +94,20 @@ func (r *Relay) run(ctx context.Context) {
 			return
 		case header := <-r.ethereumNewBlockChan:
 			fmt.Printf("new ethereum header: %s\n", header.Number)
+			r.emitter.SetBridgeHash(0, common.Hash{0x12}) // TODO
 		case header := <-r.localNewBlockChan:
 			fmt.Printf("new local header: %s\n", header.Block.Number)
+			r.emitter.SetBridgeHash(1, common.Hash{0x34}) // TODO
 		case err := <-r.ethereumSub.Err():
 			fmt.Printf("ethereum subscription err: %s\n", err)
 		case err := <-r.localNewBlockSub.Err():
 			fmt.Printf("local subscription err: %s\n", err)
 		}
+	}
+}
+
+func (r *Relay) OnBridgeVotesReceive(bridgeVotes []inter.BridgeVote) {
+	for _, bridgeVote := range bridgeVotes {
+		fmt.Printf("received bridge vote: %v\n", bridgeVote)
 	}
 }

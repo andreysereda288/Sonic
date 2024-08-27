@@ -2,6 +2,7 @@ package gossip
 
 import (
 	"fmt"
+	"github.com/Fantom-foundation/go-opera/bridge"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -63,6 +64,7 @@ func (s *Service) GetConsensusCallbacks() lachesis.ConsensusCallbacks {
 			&s.emitters,
 			s.verWatcher,
 			&s.bootstrapping,
+			s.bridgeRelay,
 		),
 	}
 }
@@ -80,6 +82,7 @@ func consensusCallbackBeginBlockFn(
 	emitters *[]*emitter.Emitter,
 	verWatcher *verwatcher.VerWarcher,
 	bootstrapping *bool,
+	bridgeRelay *bridge.Relay,
 ) lachesis.BeginBlockFn {
 	return func(cBlock *lachesis.Block) lachesis.BlockCallbacks {
 		if *bootstrapping {
@@ -129,6 +132,10 @@ func consensusCallbackBeginBlockFn(
 				}
 				if e.AnyTxs() {
 					confirmedEvents = append(confirmedEvents, e.ID())
+				}
+				if e.AnyBridgeVotes() {
+					bridgeVotes := store.GetEventPayload(e.ID()).BridgeVotes()
+					bridgeRelay.OnBridgeVotesReceive(bridgeVotes)
 				}
 				eventProcessor.ProcessConfirmedEvent(e)
 				for _, em := range *emitters {

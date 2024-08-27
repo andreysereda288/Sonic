@@ -339,6 +339,7 @@ func (s *Service) RegisterBridgeRelay(relay *bridge.Relay) {
 	ch := make(chan evmcore.ChainHeadNotify)
 	sub := s.feed.SubscribeNewBlock(ch)
 	relay.SetNewBlockChan(ch, sub)
+	relay.SetEmitter(s.emitters[0])
 }
 
 // MakeProtocols constructs the P2P protocol definitions for `opera`.
