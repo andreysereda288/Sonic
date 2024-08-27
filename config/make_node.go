@@ -2,10 +2,12 @@ package config
 
 import (
 	"fmt"
+	"github.com/Fantom-foundation/go-opera/bridge"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/external"
 	"github.com/ethereum/go-ethereum/accounts/scwallet"
 	"github.com/ethereum/go-ethereum/accounts/usbwallet"
+	"math/big"
 	"path"
 	"time"
 
@@ -73,7 +75,7 @@ func MakeNode(ctx *cli.Context, cfg *Config) (*node.Node, *gossip.Service, func(
 
 	stack, err := MakeNetworkStack(ctx, &cfg.Node)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to unlock validator key: %w", err)
+		return nil, nil, nil, fmt.Errorf("failed to make network stack: %w", err)
 	}
 	cleanup = append(cleanup, func() {
 		if err := stack.Close(); err != nil && err != node.ErrNodeStopped {
@@ -144,6 +146,13 @@ func MakeNode(ctx *cli.Context, cfg *Config) (*node.Node, *gossip.Service, func(
 
 	if cfg.Emitter.Validator.ID != 0 {
 		svc.RegisterEmitter(emitter.NewEmitter(cfg.Emitter, svc.EmitterWorld(signer)))
+
+		// bridge relay setup
+		relay, err := bridge.MakeRelay("ws://localhost:8545", big.NewInt(31337))
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("failed to start bridge relay: %w", err)
+		}
+		svc.RegisterBridgeRelay(relay)
 	}
 
 	stack.RegisterAPIs(svc.APIs())

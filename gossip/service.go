@@ -3,6 +3,7 @@ package gossip
 import (
 	"errors"
 	"fmt"
+	"github.com/Fantom-foundation/go-opera/bridge"
 	"math/big"
 	"math/rand"
 	"sync"
@@ -152,6 +153,8 @@ type Service struct {
 	bootstrapping bool
 
 	logger.Instance
+
+	bridgeRelay *bridge.Relay
 }
 
 func NewService(stack *node.Node, config Config, store *Store, blockProc BlockProc,
@@ -331,6 +334,13 @@ func (s *Service) RegisterEmitter(em *emitter.Emitter) {
 	s.emitters = append(s.emitters, em)
 }
 
+func (s *Service) RegisterBridgeRelay(relay *bridge.Relay) {
+	s.bridgeRelay = relay
+	ch := make(chan evmcore.ChainHeadNotify)
+	sub := s.feed.SubscribeNewBlock(ch)
+	relay.SetNewBlockChan(ch, sub)
+}
+
 // MakeProtocols constructs the P2P protocol definitions for `opera`.
 func MakeProtocols(svc *Service, backend *handler, disc enode.Iterator) []p2p.Protocol {
 	protocols := make([]p2p.Protocol, len(ProtocolVersions))
@@ -444,6 +454,12 @@ func (s *Service) Start() error {
 		s.stopped = true
 	}
 
+	if s.bridgeRelay != nil {
+		if err := s.bridgeRelay.Start(); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -456,6 +472,11 @@ func (s *Service) WaitBlockEnd() {
 func (s *Service) Stop() error {
 	defer log.Info("Fantom service stopped")
 	s.verWatcher.Stop()
+
+	if s.bridgeRelay != nil {
+		s.bridgeRelay.Stop()
+	}
+
 	for _, em := range s.emitters {
 		em.Stop()
 	}
