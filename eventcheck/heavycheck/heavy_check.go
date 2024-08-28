@@ -21,10 +21,7 @@ var (
 	ErrMalformedTxSig           = errors.New("tx has wrong signature")
 	ErrWrongPayloadHash         = errors.New("event has wrong payload hash")
 	ErrPubkeyChanged            = errors.New("validator pubkey has changed, cannot create BVs/EV for older epochs")
-	ErrUnknownEpochEventLocator = errors.New("event locator has unknown epoch")
-	ErrImpossibleBVsEpoch       = errors.New("BVs have an impossible epoch")
-	ErrUnknownEpochBVs          = errors.New("BVs are unprocessable yet")
-	ErrUnknownEpochEV           = errors.New("EV is unprocessable yet")
+	ErrInvalidBridgeVote        = errors.New("invalid bridge vote")
 
 	errTerminated = errors.New("terminated") // internal err
 )
@@ -170,7 +167,32 @@ func (v *Checker) ValidateEvent(e inter.EventPayloadI) error {
 		return ErrWrongPayloadHash
 	}
 
+	if e.AnyBridgeVotes() {
+		if !validateBridgeVotes(e.BridgeVotes(), pubkey) {
+			return ErrInvalidBridgeVote
+		}
+	}
+
 	return nil
+}
+
+func validateBridgeVotes(votes []inter.BridgeVote, pubkey validatorpk.PubKey) bool {
+	for _, vote := range votes {
+		var sign inter.BridgeSignature
+		copy(sign[:], vote.Signature[:])
+		if sign[64] < 27 || sign[64] > 28 {
+			return false
+		}
+		sign[64] -= 27 // the V value is 27 or 28 as an Ethereum convention
+		votePubkey, err := crypto.SigToPub(vote.Hash[:], sign[:])
+		if err != nil {
+			return false
+		}
+		if !bytes.Equal(crypto.FromECDSAPub(votePubkey), pubkey.Raw) {
+			return false
+		}
+	}
+	return true
 }
 
 func (v *Checker) loop() {
