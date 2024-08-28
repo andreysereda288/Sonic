@@ -102,7 +102,7 @@ type Emitter struct {
 	emittedEvFile    *os.File
 	busyRate         *rate.Gauge
 
-	bridgeHashes []common.Hash
+	bridgeVotes map[uint64]inter.BridgeVote
 
 	logger.Periodic
 }
@@ -123,6 +123,7 @@ func NewEmitter(
 		originatedTxs:            originatedtxs.New(SenderCountBufferSize),
 		intervals:                config.EmitIntervals,
 		globalConfirmingInterval: config.EmitIntervals.Confirming,
+		bridgeVotes:              make(map[uint64]inter.BridgeVote),
 		Periodic:                 logger.Periodic{Instance: logger.New()},
 	}
 }
@@ -328,31 +329,28 @@ func (em *Emitter) loadPrevEmitTime() time.Time {
 	return prevEvent.CreationTime().Time()
 }
 
-func (em *Emitter) SetBridgeHash(index int, hash common.Hash) {
-	for len(em.bridgeHashes) <= index {
-		em.bridgeHashes = append(em.bridgeHashes, common.Hash{})
-	}
-	em.bridgeHashes[index] = hash
+func (em *Emitter) SetBridgeVote(vote inter.BridgeVote) {
+	em.bridgeVotes[vote.ChainID] = vote
 }
 
 func (em *Emitter) getBridgeVotes() []inter.BridgeVote {
-	var bridgeVotes = make([]inter.BridgeVote, 0, len(em.bridgeHashes))
-	for _, bridgeHash := range em.bridgeHashes {
-		if bridgeHash != (common.Hash{}) {
-			bridgeSignature, err := em.world.Signer.SignBridge(em.config.Validator.PubKey, bridgeHash[:])
-			if err != nil {
-				em.Periodic.Error(time.Second, "Failed to sign bridge vote", "err", err)
-				return nil
-			}
-			var sig inter.BridgeSignature
-			copy(sig[:], bridgeSignature)
-			bridgeVotes = append(bridgeVotes, inter.BridgeVote{
-				Hash: bridgeHash,
-				Signature: sig,
-			})
+	var bridgeVotes = make([]inter.BridgeVote, 0, len(em.bridgeVotes))
+	for _, vote := range em.bridgeVotes {
+		bridgeSignature, err := em.world.Signer.SignBridge(em.config.Validator.PubKey, vote.Hash[:])
+		if err != nil {
+			em.Periodic.Error(time.Second, "Failed to sign bridge vote", "err", err)
+			return nil
 		}
+		copy(vote.Signature[:], bridgeSignature)
+		bridgeVotes = append(bridgeVotes, vote)
 	}
 	return bridgeVotes
+}
+
+func (em *Emitter) invalidateBridgeVotes(votes []inter.BridgeVote) {
+	for _, vote := range votes {
+		delete(em.bridgeVotes, vote.ChainID)
+	}
 }
 
 // createEvent is not safe for concurrent use.
@@ -500,6 +498,9 @@ func (em *Emitter) createEvent(sortedTxs *transactionsByPriceAndNonce) (*inter.E
 		em.Periodic.Error(time.Second, "Emitted incorrect event", "err", err)
 		return nil, err
 	}
+
+	// avoid emitting the same bridge votes again (when we are sure this event will be emitted)
+	em.invalidateBridgeVotes(event.BridgeVotes())
 
 	// set mutEvent name for debug
 	em.nameEventForDebug(event)

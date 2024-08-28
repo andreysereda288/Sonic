@@ -6,25 +6,29 @@ import (
 	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/Fantom-foundation/go-opera/gossip/emitter"
 	"github.com/Fantom-foundation/go-opera/inter"
+	"github.com/Fantom-foundation/go-opera/logger"
 	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/event"
 	"math/big"
+	"time"
 )
 
 type Relay struct {
 	ethClient *ethclient.Client
+	ethChainId *big.Int
+	localChainId *big.Int
 	localNewBlockChan chan evmcore.ChainHeadNotify
 	localNewBlockSub event.Subscription
 	ethereumNewBlockChan chan *types.Header
 	ethereumSub     ethereum.Subscription
 	stopRunningLoop context.CancelFunc
 	emitter *emitter.Emitter
+	logger logger.Periodic
 }
 
-func MakeRelay(ethUrl string, ethChainId *big.Int) (*Relay, error) {
+func MakeRelay(ethUrl string, ethChainId *big.Int, localChainId *big.Int) (*Relay, error) {
 	ethClient, err := ethclient.Dial(ethUrl)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to Ethereum node: %w", err)
@@ -46,6 +50,9 @@ func MakeRelay(ethUrl string, ethChainId *big.Int) (*Relay, error) {
 
 	return &Relay{
 		ethClient: ethClient,
+		ethChainId: ethChainId,
+		localChainId: localChainId,
+		logger: logger.Periodic{Instance: logger.New()},
 	}, nil
 }
 
@@ -94,10 +101,28 @@ func (r *Relay) run(ctx context.Context) {
 			return
 		case header := <-r.ethereumNewBlockChan:
 			fmt.Printf("new ethereum header: %s\n", header.Number)
-			r.emitter.SetBridgeHash(0, common.Hash{0x12}) // TODO
+			hash, err := GetUpdateHash(header.Number, header.Root, r.ethChainId, nil)
+			if err != nil {
+				r.logger.Error(time.Second,"Failed to get update hash", "err", err)
+				continue
+			}
+			r.emitter.SetBridgeVote(inter.BridgeVote{
+				BlockNum:  header.Number.Uint64(),
+				ChainID:   r.ethChainId.Uint64(),
+				Hash:      hash,
+			})
 		case header := <-r.localNewBlockChan:
 			fmt.Printf("new local header: %s\n", header.Block.Number)
-			r.emitter.SetBridgeHash(1, common.Hash{0x34}) // TODO
+			hash, err := GetUpdateHash(header.Block.Number, header.Block.Root, r.ethChainId, nil)
+			if err != nil {
+				r.logger.Error(time.Second,"Failed to get update hash", "err", err)
+				continue
+			}
+			r.emitter.SetBridgeVote(inter.BridgeVote{
+				BlockNum:  header.Block.Number.Uint64(),
+				ChainID:   r.localChainId.Uint64(),
+				Hash:      hash,
+			})
 		case err := <-r.ethereumSub.Err():
 			fmt.Printf("ethereum subscription err: %s\n", err)
 		case err := <-r.localNewBlockSub.Err():

@@ -148,7 +148,7 @@ func MakeNode(ctx *cli.Context, cfg *Config) (*node.Node, *gossip.Service, func(
 		svc.RegisterEmitter(emitter.NewEmitter(cfg.Emitter, svc.EmitterWorld(signer)))
 
 		// bridge relay setup
-		relay, err := bridge.MakeRelay("ws://localhost:8545", big.NewInt(31337))
+		relay, err := bridge.MakeRelay("ws://localhost:8545", big.NewInt(31337), big.NewInt(0xFA3))
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("failed to start bridge relay: %w", err)
 		}
