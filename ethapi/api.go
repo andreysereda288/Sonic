@@ -20,6 +20,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/big"
+	"time"
+
 	cc "github.com/Fantom-foundation/Carmen/go/common"
 	"github.com/Fantom-foundation/Carmen/go/common/immutable"
 	"github.com/Fantom-foundation/go-opera/gossip/evmstore"
@@ -2104,9 +2107,9 @@ func (api *PublicDebugAPI) traceBlock(ctx context.Context, block *evmcore.EvmBlo
 	defer statedb.Release()
 
 	var (
-		txs       = block.Transactions
-		signer    = gsignercache.Wrap(types.MakeSigner(api.b.ChainConfig(), block.Number, uint64(block.Time.Unix())))
-		results   = make([]*txTraceResult, len(txs))
+		txs     = block.Transactions
+		signer  = gsignercache.Wrap(types.MakeSigner(api.b.ChainConfig(), block.Number, uint64(block.Time.Unix())))
+		results = make([]*txTraceResult, len(txs))
 	)
 	for i, tx := range txs {
 		msg, _ := evmcore.TxAsMessage(tx, signer, block.BaseFee)
