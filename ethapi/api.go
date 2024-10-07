@@ -27,8 +27,6 @@ import (
 	"github.com/Fantom-foundation/Carmen/go/common/immutable"
 	"github.com/Fantom-foundation/go-opera/gossip/evmstore"
 	bip39 "github.com/tyler-smith/go-bip39"
-	"math/big"
-	"time"
 
 	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/Fantom-foundation/go-opera/gossip/gasprice"
