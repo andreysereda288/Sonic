@@ -314,6 +314,8 @@ func (t *StateTest) RunNoVerify(subtest StateSubtest, vmconfig vm.Config) (st St
 	st.StateDB.AddBalance(block.Coinbase(), new(uint256.Int), tracing.BalanceChangeUnspecified)
 
 	// Commit state mutations into database.
+	st.StateDB.Finalise()
+	st.StateDB.EndBlock(block.NumberU64())
 	root, _ = st.StateDB.Commit(config.IsEIP158(block.Number()))
 	if tracer := evm.Config.Tracer; tracer != nil && tracer.OnTxEnd != nil {
 		receipt := &types.Receipt{GasUsed: vmRet.UsedGas}
