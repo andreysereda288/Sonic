@@ -484,6 +484,8 @@ func MakePreState(accounts types.GenesisAlloc) StateTestState {
 	if _, err := statedb.Commit(false); err != nil {
 		panic(fmt.Sprintf("cannot commit state: %v", err))
 	}
+	carmenstatedb = carmen.CreateCustomStateDBUsing(st, 1024)
+	statedb = evmstore.CreateCarmenStateDb(carmenstatedb)
 
 	return StateTestState{statedb, func() error {
 		return errors.Join(
