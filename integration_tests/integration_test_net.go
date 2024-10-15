@@ -51,6 +51,7 @@ func StartIntegrationTestNet(directory string) (*IntegrationTestNet, error) {
 			"--http.api", "admin,eth,web3,net,txpool,ftm,trace,debug",
 			"--ws", "--ws.addr", "0.0.0.0", "--ws.port", "18546", "--ws.api", "admin,eth,ftm",
 			"--pprof", "--pprof.addr", "0.0.0.0",
+			"--datadir.minfreedisk", "0",
 		}
 		sonicd.RunSonicd()
 	}()
