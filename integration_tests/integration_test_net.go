@@ -2,6 +2,7 @@ package integration_tests
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"fmt"
 	"os"
 	"syscall"
@@ -9,20 +10,18 @@ import (
 
 	sonicd "github.com/Fantom-foundation/go-opera/cmd/sonicd/cmd"
 	sonictool "github.com/Fantom-foundation/go-opera/cmd/sonictool/cmd"
+	"github.com/Fantom-foundation/go-opera/evmcore"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/holiman/uint256"
 )
 
 type IntegrationTestNet struct {
 	done <-chan struct{}
-}
 
-func (n *IntegrationTestNet) stop() {
-	syscall.Kill(syscall.Getpid(), syscall.SIGINT)
-	<-n.done
-}
-
-func (n *IntegrationTestNet) getClient() (*ethclient.Client, error) {
-	return ethclient.Dial("http://localhost:18545")
+	validatorKey *ecdsa.PrivateKey
 }
 
 // StartIntegrationTestNet starts a single-node test network for integration tests.
@@ -56,7 +55,10 @@ func StartIntegrationTestNet(directory string) (*IntegrationTestNet, error) {
 		sonicd.RunSonicd()
 	}()
 
-	result := &IntegrationTestNet{done}
+	result := &IntegrationTestNet{
+		done:         done,
+		validatorKey: evmcore.FakeKey(1),
+	}
 
 	// connect to blockchain network
 	client, err := result.getClient()
@@ -77,4 +79,75 @@ func StartIntegrationTestNet(directory string) (*IntegrationTestNet, error) {
 	}
 
 	return nil, fmt.Errorf("failed to connect to successfully start up a test network")
+}
+
+func (n *IntegrationTestNet) stop() {
+	syscall.Kill(syscall.Getpid(), syscall.SIGINT)
+	<-n.done
+}
+
+func (n *IntegrationTestNet) run(tx *types.Transaction) (*types.Receipt, error) {
+	client, err := n.getClient()
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to the Ethereum client: %w", err)
+	}
+	err = client.SendTransaction(context.Background(), tx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send transaction: %w", err)
+	}
+
+	receipt, err := client.TransactionReceipt(context.Background(), tx.Hash())
+	for i := 0; err != nil && i < 10; i++ {
+		time.Sleep(1 * time.Second)
+		receipt, err = client.TransactionReceipt(context.Background(), tx.Hash())
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get transaction receipt: %w", err)
+	}
+	return receipt, nil
+}
+
+func (n *IntegrationTestNet) endowAccount(
+	address common.Address,
+	value *uint256.Int,
+) error {
+	client, err := n.getClient()
+	if err != nil {
+		return fmt.Errorf("failed to connect to the network: %w", err)
+	}
+	defer client.Close()
+
+	chainId, err := client.ChainID(context.Background())
+	if err != nil {
+		return fmt.Errorf("failed to get chain ID: %w", err)
+	}
+
+	validatorAddress := crypto.PubkeyToAddress(n.validatorKey.PublicKey)
+	nonce, err := client.NonceAt(context.Background(), validatorAddress, nil)
+	if err != nil {
+		return fmt.Errorf("failed to get nonce: %w", err)
+	}
+
+	price, err := client.SuggestGasPrice(context.Background())
+	if err != nil {
+		return fmt.Errorf("failed to get gas price: %w", err)
+	}
+
+	transaction, err := types.SignTx(types.NewTx(&types.AccessListTx{
+		ChainID:  chainId,
+		Gas:      21000,
+		GasPrice: price,
+		To:       &address,
+		Value:    value.ToBig(),
+		Nonce:    nonce,
+	}), types.NewLondonSigner(chainId), n.validatorKey)
+	if err != nil {
+		return fmt.Errorf("failed to sign transaction: %w", err)
+	}
+	_, err = n.run(transaction)
+	return err
+}
+
+func (n *IntegrationTestNet) getClient() (*ethclient.Client, error) {
+	return ethclient.Dial("http://localhost:18545")
 }
