@@ -1,17 +1,18 @@
-package main
+package cmd
 
 import (
 	"fmt"
-	"github.com/Fantom-foundation/go-opera/version"
 	"os"
 	"os/signal"
 	"sort"
 	"syscall"
 	"time"
 
-	"github.com/Fantom-foundation/go-opera/cmd/sonicd/diskusage"
-	"github.com/Fantom-foundation/go-opera/cmd/sonicd/metrics"
-	"github.com/Fantom-foundation/go-opera/cmd/sonicd/tracing"
+	"github.com/Fantom-foundation/go-opera/version"
+
+	"github.com/Fantom-foundation/go-opera/cmd/sonicd/cmd/diskusage"
+	"github.com/Fantom-foundation/go-opera/cmd/sonicd/cmd/metrics"
+	"github.com/Fantom-foundation/go-opera/cmd/sonicd/cmd/tracing"
 	"github.com/Fantom-foundation/go-opera/config"
 	"github.com/Fantom-foundation/go-opera/config/flags"
 	"github.com/ethereum/go-ethereum/accounts"

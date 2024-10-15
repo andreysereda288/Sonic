@@ -1,9 +1,12 @@
-package main
+package cmd
 
 import (
 	"fmt"
-	"github.com/Fantom-foundation/go-opera/cmd/sonictool/db"
-	"github.com/Fantom-foundation/go-opera/cmd/sonictool/genesis"
+	"os"
+	"strconv"
+
+	"github.com/Fantom-foundation/go-opera/cmd/sonictool/cmd/db"
+	"github.com/Fantom-foundation/go-opera/cmd/sonictool/cmd/genesis"
 	"github.com/Fantom-foundation/go-opera/config/flags"
 	"github.com/Fantom-foundation/go-opera/integration/makefakegenesis"
 	"github.com/Fantom-foundation/go-opera/opera/genesisstore"
@@ -14,8 +17,6 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 	"gopkg.in/urfave/cli.v1"
-	"os"
-	"strconv"
 )
 
 var (

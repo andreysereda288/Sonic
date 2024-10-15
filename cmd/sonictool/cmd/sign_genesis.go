@@ -1,14 +1,15 @@
-package main
+package cmd
 
 import (
 	"fmt"
-	"github.com/Fantom-foundation/go-opera/cmd/sonictool/genesis"
+	"os"
+
+	"github.com/Fantom-foundation/go-opera/cmd/sonictool/cmd/genesis"
 	ogenesis "github.com/Fantom-foundation/go-opera/opera/genesis"
 	"github.com/Fantom-foundation/go-opera/opera/genesisstore"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/log"
 	"gopkg.in/urfave/cli.v1"
-	"os"
 )
 
 func signGenesis(ctx *cli.Context) error {

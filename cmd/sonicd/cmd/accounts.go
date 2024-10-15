@@ -14,16 +14,17 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-package main
+package cmd
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/Fantom-foundation/go-opera/config"
 	"github.com/Fantom-foundation/go-opera/config/flags"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/node"
 	"gopkg.in/urfave/cli.v1"
-	"strings"
 )
 
 // unlockAccounts unlocks any account specifically requested.

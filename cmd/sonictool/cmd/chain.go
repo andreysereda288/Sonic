@@ -1,17 +1,18 @@
-package main
+package cmd
 
 import (
 	"compress/gzip"
 	"fmt"
-	"github.com/Fantom-foundation/go-opera/cmd/sonictool/chain"
-	"github.com/Fantom-foundation/go-opera/config/flags"
-	"github.com/Fantom-foundation/lachesis-base/inter/idx"
-	"github.com/ethereum/go-ethereum/log"
-	"gopkg.in/urfave/cli.v1"
 	"io"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/Fantom-foundation/go-opera/cmd/sonictool/cmd/chain"
+	"github.com/Fantom-foundation/go-opera/config/flags"
+	"github.com/Fantom-foundation/lachesis-base/inter/idx"
+	"github.com/ethereum/go-ethereum/log"
+	"gopkg.in/urfave/cli.v1"
 )
 
 func exportEvents(ctx *cli.Context) error {

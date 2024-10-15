@@ -16,15 +16,15 @@
 
 // Contains the geth command usage template and generator.
 
-package main
+package cmd
 
 import (
-	"github.com/Fantom-foundation/go-opera/cmd/sonicd/cmdhelper"
 	"io"
 	"sort"
 
 	cli "gopkg.in/urfave/cli.v1"
 
+	"github.com/Fantom-foundation/go-opera/cmd/sonicd/cmd/cmdhelper"
 	"github.com/Fantom-foundation/go-opera/debug"
 )
 

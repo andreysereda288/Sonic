@@ -1,25 +1,26 @@
-package main
+package cmd
 
 import (
 	"bufio"
 	"context"
 	"errors"
 	"fmt"
-	"github.com/Fantom-foundation/Carmen/go/database/mpt"
-	io2 "github.com/Fantom-foundation/Carmen/go/database/mpt/io"
-	mptio "github.com/Fantom-foundation/Carmen/go/database/mpt/io"
-	"github.com/Fantom-foundation/go-opera/cmd/sonictool/db"
-	"github.com/Fantom-foundation/go-opera/config"
-	"github.com/Fantom-foundation/go-opera/config/flags"
-	"github.com/Fantom-foundation/lachesis-base/inter/idx"
-	"github.com/ethereum/go-ethereum/log"
-	"gopkg.in/urfave/cli.v1"
 	"io"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"sync"
 	"syscall"
+
+	"github.com/Fantom-foundation/Carmen/go/database/mpt"
+	io2 "github.com/Fantom-foundation/Carmen/go/database/mpt/io"
+	mptio "github.com/Fantom-foundation/Carmen/go/database/mpt/io"
+	"github.com/Fantom-foundation/go-opera/cmd/sonictool/cmd/db"
+	"github.com/Fantom-foundation/go-opera/config"
+	"github.com/Fantom-foundation/go-opera/config/flags"
+	"github.com/Fantom-foundation/lachesis-base/inter/idx"
+	"github.com/ethereum/go-ethereum/log"
+	"gopkg.in/urfave/cli.v1"
 )
 
 func heal(ctx *cli.Context) error {
@@ -103,8 +104,8 @@ func healLiveFromArchive(ctx context.Context, carmenLiveDir, carmenArchiveDir st
 
 	reader, writer := io.Pipe()
 	defer reader.Close()
-	bufReader := bufio.NewReaderSize(reader, 100 * 1024 * 1024) // 100 MiB
-	bufWriter := bufio.NewWriterSize(writer, 100 * 1024 * 1024) // 100 MiB
+	bufReader := bufio.NewReaderSize(reader, 100*1024*1024) // 100 MiB
+	bufWriter := bufio.NewWriterSize(writer, 100*1024*1024) // 100 MiB
 
 	var exportErr error
 	var wg sync.WaitGroup

@@ -1,20 +1,21 @@
-package main
+package cmd
 
 import (
 	"context"
 	"fmt"
-	"github.com/Fantom-foundation/go-opera/cmd/sonictool/db"
-	"github.com/Fantom-foundation/go-opera/cmd/sonictool/genesis"
-	"github.com/Fantom-foundation/go-opera/config/flags"
-	"github.com/Fantom-foundation/go-opera/integration"
-	"github.com/Fantom-foundation/lachesis-base/utils/cachescale"
-	"github.com/syndtr/goleveldb/leveldb/opt"
-	"gopkg.in/urfave/cli.v1"
 	"os"
 	"os/signal"
 	"path"
 	"path/filepath"
 	"syscall"
+
+	"github.com/Fantom-foundation/go-opera/cmd/sonictool/cmd/db"
+	"github.com/Fantom-foundation/go-opera/cmd/sonictool/cmd/genesis"
+	"github.com/Fantom-foundation/go-opera/config/flags"
+	"github.com/Fantom-foundation/go-opera/integration"
+	"github.com/Fantom-foundation/lachesis-base/utils/cachescale"
+	"github.com/syndtr/goleveldb/leveldb/opt"
+	"gopkg.in/urfave/cli.v1"
 )
 
 func exportGenesis(ctx *cli.Context) error {

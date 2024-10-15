@@ -1,10 +1,11 @@
-package main
+package cmd
 
 import (
 	"fmt"
-	"github.com/Fantom-foundation/go-opera/version"
 	"os"
 	"runtime"
+
+	"github.com/Fantom-foundation/go-opera/version"
 
 	"github.com/Fantom-foundation/go-opera/config"
 	"gopkg.in/urfave/cli.v1"

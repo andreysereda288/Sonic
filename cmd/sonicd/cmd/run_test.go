@@ -1,18 +1,19 @@
-package main
+package cmd
 
 import (
 	"context"
 	"fmt"
-	"github.com/Fantom-foundation/go-opera/cmd/sonictool/genesis"
+	"os"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/Fantom-foundation/go-opera/cmd/sonictool/cmd/genesis"
 	"github.com/Fantom-foundation/go-opera/config"
 	"github.com/Fantom-foundation/go-opera/integration/makefakegenesis"
 	futils "github.com/Fantom-foundation/go-opera/utils"
 	"github.com/Fantom-foundation/lachesis-base/inter/idx"
 	"github.com/Fantom-foundation/lachesis-base/utils/cachescale"
-	"os"
-	"strings"
-	"testing"
-	"time"
 
 	"github.com/docker/docker/pkg/reexec"
 	"github.com/ethereum/go-ethereum/common"

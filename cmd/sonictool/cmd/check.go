@@ -1,13 +1,14 @@
-package main
+package cmd
 
 import (
 	"context"
 	"fmt"
-	"github.com/Fantom-foundation/go-opera/cmd/sonictool/check"
-	"github.com/Fantom-foundation/go-opera/config/flags"
-	"gopkg.in/urfave/cli.v1"
 	"os/signal"
 	"syscall"
+
+	"github.com/Fantom-foundation/go-opera/cmd/sonictool/cmd/check"
+	"github.com/Fantom-foundation/go-opera/config/flags"
+	"gopkg.in/urfave/cli.v1"
 )
 
 func checkLive(ctx *cli.Context) error {
